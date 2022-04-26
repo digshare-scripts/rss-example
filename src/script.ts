@@ -4,7 +4,10 @@ import RSSParser from 'rss-parser';
 // 配置目标 RSS 地址。
 const RSS_URL = 'https://sspai.com/feed';
 
+// 配置内容筛选关键字，空格隔开。
 const KEYWORDS_SPACE_SEPARATED = '关键字 用空格 隔开 比如 app 软件';
+// 如果不需要筛选关键字，则删除引号之间的内容，如下：
+// const KEYWORDS_SPACE_SEPARATED = '';
 
 const KEYWORDS = KEYWORDS_SPACE_SEPARATED
   ? KEYWORDS_SPACE_SEPARATED.toLowerCase().split(' ')
