@@ -21,7 +21,7 @@ interface Storage {
   seen: string[];
 }
 
-export default script<void, Storage>(async (_payload, {storage}) => {
+export default script<void, Storage>(async function* (_payload, {storage}) {
   // 取出之前就看到过的订阅内容 id，将其转化为 Set 数据结构，便于后续判断。
   const seenSet = new Set(storage.getItem('seen'));
 
@@ -77,23 +77,18 @@ export default script<void, Storage>(async (_payload, {storage}) => {
     return;
   }
 
-  return {
-    content: `\
-发现了 ${filteredUnseenItems.length} 篇新内容：
+  for (let item of filteredUnseenItems) {
+    yield {
+      content: `\
+《${item.title}》
 
-${filteredUnseenItems.map(item => `- 《${item.title}》`).join('\n')}`,
-    links: [
-      // 提供链接：
-      ...filteredUnseenItems.map(item => {
-        return {
-          // 链接标题使用订阅内容标题
+${item.content ?? item.contentSnippet}`,
+      links: [
+        {
           title: item.title,
-          // 链接描述使用订阅内容片段
-          description: item.contentSnippet,
-          // 链接地址
           url: item.link!,
-        };
-      }),
-    ],
-  };
+        },
+      ],
+    };
+  }
 });
