@@ -2,7 +2,9 @@ import {script} from '@digshare/script';
 import RSSParser from 'rss-parser';
 
 // 配置目标 RSS 地址。
-const RSS_URL = 'https://sspai.com/feed';
+const RSS_URLS = ['https://sspai.com/feed'];
+// 如果需要多个地址，参考如下配置（地址前后加单引号，中间用逗号隔开）：
+// const RSS_URLS = ['https://sspai.com/feed', 'https://vane.life/rss/'];
 
 // 配置内容筛选关键字，空格隔开。
 const KEYWORDS_SPACE_SEPARATED = '关键字 用空格 隔开 比如 app 软件';
@@ -24,10 +26,17 @@ export default script<void, Storage>(async (_payload, {storage}) => {
   const seenSet = new Set(storage.getItem('seen'));
 
   // 使用 RSS Parser 加载、解析目标 RSS 列表。
-  const feed = await rssParser.parseURL(RSS_URL);
+  const feeds = await Promise.all(RSS_URLS.map(url => rssParser.parseURL(url)));
+
+  const items = feeds
+    .flatMap(feed => feed.items)
+    .sort(
+      (x, y) =>
+        new Date(y.pubDate ?? 0).getTime() - new Date(x.pubDate ?? 0).getTime(),
+    );
 
   // 从加载的 RSS 订阅内容中筛选出之前没有看到过的内容。
-  const unseenItems = feed.items.filter(
+  const unseenItems = items.filter(
     item =>
       // seenSet 中如果有 item.guid，就说明之前看到过。
       !!item.link && !seenSet.has(item.guid ?? item.link),
@@ -68,14 +77,14 @@ export default script<void, Storage>(async (_payload, {storage}) => {
     return;
   }
 
-  // 从新内容中取出前 3 条（主要怕一次性新内容太多，比如脚本第一次执行）。
-  const mostRecentUnseenItems = filteredUnseenItems.slice(0, 3);
-
   return {
-    content: `发现了 ${filteredUnseenItems.length} 篇新内容。`,
+    content: `\
+发现了 ${filteredUnseenItems.length} 篇新内容：
+
+${filteredUnseenItems.map(item => `- 《${item.title}》`).join('\n')}`,
     links: [
       // 提供链接：
-      ...mostRecentUnseenItems.map(item => {
+      ...filteredUnseenItems.map(item => {
         return {
           // 链接标题使用订阅内容标题
           title: item.title,
